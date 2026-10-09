@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>اعلام شارژ باتری</title>
+<script>
+window.onerror=function(m,s,l){var t="خطا: "+m+" (خط "+l+")";var e=document.getElementById("msg");if(e){e.textContent=t}else{window.__err=t;document.addEventListener("DOMContentLoaded",function(){var x=document.getElementById("msg");if(x)x.textContent=window.__err;});}};
+</script>
 <style>
 /* ===== تم‌ها ===== */
 :root, [data-theme="sea"]{
@@ -421,10 +424,4 @@ label.b{display:inline-block;cursor:pointer;font:inherit;font-weight:700;font-si
 
   function render() {
     $("markLo").style.strokeDashoffset = -(C * cfg.low.level / 100) + 1;
-    $("markHi").style.strokeDashoffset = -(C * cfg.full.level / 100) + 1;
-    if (!batt) return;
-    var p = Math.round(batt.level * 100);
-    $("pct").textContent = fa(p) + "٪";
-    $("bar").style.strokeDashoffset = C - C * batt.level;
-    document.documentElement.style.setProperty("--c", colorFor(p));
-    $("state").textContent = 
+    $("markHi").style.strokeDashoffset = -(
