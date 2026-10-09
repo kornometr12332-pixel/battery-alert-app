@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>اعلام شارژ باتری</title>
+<style>
+/* ===== تم‌ها ===== */
+:root, [data-theme="sea"]{
+  --bg:#0f2a2e; --panel:#173a40; --ink:#eaf4f1; --mute:#8fb3ae; --line:#2a5760;
+  --acc:#5fd0a0; --warn:#f0b43c; --bad:#e5654f; --btn:#0b1d20;
+}
+[data-theme="amber"]{
+  --bg:#1a1410; --panel:#271e17; --ink:#f6ead7; --mute:#b39b7b; --line:#4a3a2b;
+  --acc:#ffb300; --warn:#ff8a3d; --bad:#ff5252; --btn:#1a1208;
+}
+[data-theme="ice"]{
+  --bg:#e8f2fb; --panel:#ffffff; --ink:#12263a; --mute:#5b7790; --line:#cfe0ee;
+  --acc:#1e88e5; --warn:#f59e0b; --bad:#e0483e; --btn:#ffffff;
+}
+[data-theme="violet"]{
+  --bg:#17112b; --panel:#231a42; --ink:#efe9ff; --mute:#a597d1; --line:#3d2f6b;
+  --acc:#b388ff; --warn:#ffd166; --bad:#ff6b8b; --btn:#1a1133;
+}
+[data-theme="forest"]{
+  --bg:#0f1f14; --panel:#172c1d; --ink:#e6f3e4; --mute:#8fb596; --line:#2c4a34;
+  --acc:#7ddc6f; --warn:#e6c34a; --bad:#e8704f; --btn:#0c1a10;
+}
+[data-theme="sunset"]{
+  --bg:#2a1320; --panel:#3a1b2c; --ink:#ffeee6; --mute:#d0a1a3; --line:#5c2d44;
+  --acc:#ff7a59; --warn:#ffc15a; --bad:#ff4f6d; --btn:#2a1018;
+}
+
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:Tahoma,"Vazirmatn","Noto Sans Arabic",system-ui,sans-serif;
+  padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 90px);
+  max-width:480px;margin:0 auto;
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+  transition:background .4s,color .4s;
+}
+h1{font-size:18px}
+h2{font-size:16px}
+
+/* ===== گیج ===== */
+.gauge{position:relative;width:230px;height:230px}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gauge circle{fill:none;stroke-width:16;stroke-linecap:round}
+.gauge .track{stroke:var(--line)}
+.gauge .bar{stroke:var(--c,var(--acc));stroke-dasharray:628;stroke-dashoffset:628;transition:stroke-dashoffset .8s ease,stroke .4s}
+.gauge .mark{stroke-linecap:butt;stroke-dasharray:3 625}
+.gauge .mark.lo{stroke:var(--bad)}
+.gauge .mark.hi{stroke:var(--ink)}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pct{font-size:60px;font-weight:700;line-height:1;color:var(--c,var(--acc));transition:color .4s}
+.state{font-size:14px;color:var(--mute);margin-top:8px}
+
+/* ===== دکمه اصلی ===== */
+#master{
+  width:100%;font:inherit;font-size:18px;font-weight:700;border-radius:16px;padding:16px;border:2px solid var(--acc);
+  background:var(--acc);color:var(--btn);transition:.25s;
+}
+#master.off{background:transparent;color:var(--mute);border-color:var(--line)}
+#master:active{transform:scale(.98)}
+
+.card{width:100%;background:var(--panel);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;transition:opacity .25s,background .4s}
+.card.dim{opacity:.45;pointer-events:none}
+.head{display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px}
+.row small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.val{font-weight:700;min-width:40px;text-align:left}
+.sub{font-size:13px;color:var(--mute)}
+input[type=range]{width:100%;accent-color:var(--acc);height:30px}
+select{
+  flex:1;font:inherit;font-size:14px;padding:10px;border-radius:10px;
+  background:var(--bg);color:var(--ink);border:1px solid var(--line);min-width:0;
+}
+.pair{display:flex;gap:8px;align-items:center}
+button.b{
+  font:inherit;font-weight:700;font-size:14px;border:0;border-radius:10px;padding:10px 14px;
+  background:var(--acc);color:var(--btn);flex:none;
+}
+button.b.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.b:active{transform:scale(.97)}
+button.wide{width:100%}
+.fname{font-size:12px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+label.b{display:inline-block;cursor:pointer;font:inherit;font-weight:700;font-size:14px;border-radius:10px;padding:10px 14px;background:var(--acc);color:var(--btn);flex:none}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+
+/* ===== سوییچ ===== */
+.sw{position:relative;width:48px;height:28px;flex:none}
+.sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;z-index:2}
+.sw i{position:absolute;inset:0;background:var(--line);border-radius:14px;transition:.2s}
+.sw i::after{content:"";position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:var(--ink);transition:.2s}
+.sw input:checked + i{background:var(--acc)}
+.sw input:checked + i::after{right:23px;background:var(--btn)}
+.sw input:focus-visible + i{outline:2px solid var(--ink);outline-offset:2px}
+
+/* ===== تم‌ها (انتخاب) ===== */
+.themes{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.th{
+  aspect-ratio:1;border-radius:50%;border:3px solid transparent;padding:0;cursor:pointer;
+  background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%);
+}
+.th.sel{border-color:var(--ink)}
+.tname{font-size:12px;color:var(--mute);text-align:center}
+
+#log{font-size:13px;color:var(--mute);line-height:1.9;max-height:120px;overflow:auto}
+#msg{font-size:13px;color:var(--warn);text-align:center;min-height:16px}
+
+/* ===== نوار قطع صدا ===== */
+#ring{
+  position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 14px);
+  max-width:448px;margin:0 auto;display:none;z-index:10;
+}
+#ring.show{display:block}
+#ring button{
+  width:100%;font:inherit;font-size:17px;font-weight:700;border:0;border-radius:14px;padding:16px;
+  background:var(--bad);color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.35);
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<h1>اعلام شارژ باتری</h1>
+
+<div class="gauge">
+  <svg viewBox="0 0 240 240">
+    <circle class="track" cx="120" cy="120" r="100"/>
+    <circle class="bar" id="bar" cx="120" cy="120" r="100"/>
+    <circle class="mark lo" id="markLo" cx="120" cy="120" r="100"/>
+    <circle class="mark hi" id="markHi" cx="120" cy="120" r="100"/>
+  </svg>
+  <div class="center">
+    <div class="pct" id="pct">--٪</div>
+    <div class="state" id="state">در حال خواندن باتری…</div>
+  </div>
+</div>
+
+<button id="master">اعلام‌ها روشن است</button>
+<div id="msg"></div>
+
+<div id="alerts" style="width:100%;display:flex;flex-direction:column;gap:16px"></div>
+
+<div class="card" id="gen">
+  <div class="row">
+    <span>اعلان روی صفحه<small>برای هر دو هشدار</small></span>
+    <label class="sw"><input type="checkbox" id="optNotif"><i></i></label>
+  </div>
+</div>
+
+<div class="card">
+  <h2>تم</h2>
+  <div class="themes" id="themes"></div>
+  <div class="tname" id="tname"></div>
+</div>
+
+<div class="card"><div id="log" data-empty="1">هنوز رویدادی ثبت نشده.</div></div>
+
+<div id="ring"><button id="stopBtn">قطع صدا</button></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= ابزارها ================= */
+  var $ = function (id) { return document.getElementById(id); };
+  var FA = "۰۱۲۳۴۵۶۷۸۹";
+  function fa(n) { return String(n).replace(/\d/g, function (d) { return FA[d]; }); }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  /* ================= تنظیمات ================= */
+  var DEF = {
+    on: true, theme: "sea", notif: false,
+    low:  { on: true, level: 20, sound: "drop", vol: 85, reps: 2, voice: true, vib: true, fname: "" },
+    full: { on: true, level: 80, sound: "bell", vol: 85, reps: 2, voice: true, vib: true, fname: "" }
+  };
+  var cfg = clone(DEF);
+  try {
+    var saved = JSON.parse(localStorage.getItem("bca_cfg2") || "{}");
+    cfg.on = saved.on !== undefined ? saved.on : cfg.on;
+    cfg.theme = saved.theme || cfg.theme;
+    cfg.notif = !!saved.notif;
+    ["low", "full"].forEach(function (k) { Object.assign(cfg[k], saved[k] || {}); });
+  } catch (e) {}
+  function save() { try { localStorage.setItem("bca_cfg2", JSON.stringify(cfg)); } catch (e) {} }
+
+  /* ================= ذخیره فایل صدا (IndexedDB + حافظه موقت) ================= */
+  var mem = {}; // اگر IndexedDB کار نکرد، فایل تا بستن برنامه همین‌جا می‌ماند
+  function idb() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open("bca", 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore("snd"); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+  }
+  function idbSet(k, v) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var t = db.transaction("snd", "readwrite"); t.objectStore("snd").put(v, k);
+        t.oncomplete = res; t.onerror = function () { rej(t.error); };
+      });
+    });
+  }
+  function idbGet(k) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var q = db.transaction("snd").objectStore("snd").get(k);
+        q.onsuccess = function () { res(q.result); }; q.onerror = function () { rej(q.error); };
+      });
+    });
+  }
+
+  /* ================= موتور صدا ================= */
+  var actx = null, irBuf = null;
+  function ctx() {
+    if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if (actx.state === "suspended") actx.resume();
+    return actx;
+  }
+  function unlock() { try { ctx(); if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {} }
+
+  // ریورب ساده از نویز با محو شدن نمایی
+  function impulse(c) {
+    if (irBuf) return irBuf;
+    var len = c.sampleRate * 2.2, b = c.createBuffer(2, len, c.sampleRate);
+    for (var ch = 0; ch < 2; ch++) {
+      var d = b.getChannelData(ch);
+      for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    }
+    return (irBuf = b);
+  }
+
+  // یک نت با آتک و دیکی نرم
+  function tone(c, out, t, f, type, peak, att, dur) {
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + att);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.05);
+    return o;
+  }
+
+  /* کتابخانه صداها: هر کدام مدت زمان (ثانیه) را برمی‌گرداند */
+  var SOUNDS = {
+    bell: { n: "زنگ برنجی", rv: 0.35, f: function (c, o, t) {
+      var R = [0.56, 0.92, 1, 1.19, 1.7, 2, 2.74, 3.0, 4.07];
+      [[523, 0], [659, 1.1]].forEach(function (s) {
+        R.forEach(function (r, i) { tone(c, o, t + s[1], s[0] * r, "sine", 0.28 / (1 + i * 0.5), 0.004, 2.4 - i * 0.18); });
+      });
+      return 3.4; } },
+    gong: { n: "گونگ", rv: 0.45, f: function (c, o, t) {
+      [1, 1.5, 2.01, 2.76, 3.4, 4.2].forEach(function (r, i) { tone(c, o, t, 110 * r, "sine", 0.4 / (1 + i * 0.6), 0.02, 4 - i * 0.4); });
+      return 4.2; } },
+    crystal: { n: "کریستال", rv: 0.55, f: function (c, o, t) {
+      [1319, 1760, 2093, 2637].forEach(function (f, i) { tone(c, o, t + i * 0.15, f, "sine", 0.3, 0.006, 1.8); tone(c, o, t + i * 0.15, f * 2.005, "sine", 0.08, 0.006, 0.9); });
+      return 2.6; } },
+    marimba: { n: "ماریمبا", rv: 0.25, f: function (c, o, t) {
+      [659, 784, 988, 1319, 988, 784].forEach(function (f, i) { tone(c, o, t + i * 0.13, f, "sine", 0.5, 0.004, 0.55); tone(c, o, t + i * 0.13, f * 4, "sine", 0.1, 0.002, 0.12); });
+      return 1.6; } },
+    star: { n: "ستاره (آرپژ)", rv: 0.5, f: function (c, o, t) {
+      [523, 659, 784, 1047, 1319, 1568, 2093].forEach(function (f, i) { tone(c, o, t + i * 0.1, f, "triangle", 0.28, 0.01, 1.1); });
+      return 2.1; } },
+    drop: { n: "قطره آب", rv: 0.5, f: function (c, o, t) {
+      [1500, 1250, 1700].forEach(function (f, i) {
+        var s = t + i * 0.55, os = c.createOscillator(), g = c.createGain();
+        os.type = "sine"; os.frequency.setValueAtTime(f, s); os.frequency.exponentialRampToValueAtTime(f * 0.35, s + 0.18);
+        g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.7, s + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.3);
+        os.connect(g); g.connect(o); os.start(s); os.stop(s + 0.35);
+      });
+      return 1.8; } },
+    sonar: { n: "سونار", rv: 0.7, f: function (c, o, t) {
+      tone(c, o, t, 1000, "sine", 0.6, 0.005, 1.2); tone(c, o, t + 1.6, 1000, "sine", 0.6, 0.005, 1.2);
+      return 3.2; } },
+    bike: { n: "زنگ دوچرخه", rv: 0.2, f: function (c, o, t) {
+      [0, 0.16, 0.5, 0.66].forEach(function (d) { tone(c, o, t + d, 2400, "sine", 0.4, 0.002, 0.35); tone(c, o, t + d, 3200, "sine", 0.25, 0.002, 0.3); });
+      return 1.3; } },
+    phone: { n: "تلفن قدیمی", rv: 0.1, f: function (c, o, t) {
+      var m = c.createGain(); m.gain.value = 0.5; m.connect(o);
+      var lfo = c.createOscillator(), lg = c.createGain(); lfo.type = "square"; lfo.frequency.value = 20; lg.gain.value = 0.5;
+      lfo.connect(lg); lg.connect(m.gain);
+      var gate = c.createGain(); gate.connect(m);
+      gate.gain.setValueAtTime(0.3, t); gate.gain.setValueAtTime(0, t + 0.9); gate.gain.setValueAtTime(0.3, t + 1.5); gate.gain.setValueAtTime(0, t + 2.4);
+      [440, 480].forEach(function (f) { var s = c.createOscillator(); s.frequency.value = f; s.connect(gate); s.start(t); s.stop(t + 2.5); });
+      lfo.start(t); lfo.stop(t + 2.5);
+      return 2.6; } },
+    digital: { n: "دیجیتال", rv: 0.1, f: function (c, o, t) {
+      var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3200; lp.connect(o);
+      for (var i = 0; i < 6; i++) tone(c, lp, t + i * 0.18, i % 2 ? 1400 : 1000, "square", 0.18, 0.004, 0.12);
+      return 1.3; } },
+    siren: { n: "آژیر", rv: 0.15, f: function (c, o, t) {
+      var s = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter();
+      s.type = "sawtooth"; lp.type = "lowpass"; lp.frequency.value = 1800;
+      s.frequency.setValueAtTime(600, t); s.frequency.linearRampToValueAtTime(1200, t + 1.1); s.frequency.linearRampToValueAtTime(600, t + 2.2);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.05); g.gain.setValueAtTime(0.25, t + 2.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.3);
+      s.connect(lp); lp.connect(g); g.connect(o); s.start(t); s.stop(t + 2.4);
+      return 2.4; } },
+    horn: { n: "بوق کشتی", rv: 0.4, f: function (c, o, t) {
+      var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.setValueAtTime(400, t); lp.frequency.linearRampToValueAtTime(900, t + 0.5);
+      var g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.15); g.gain.setValueAtTime(0.35, t + 1.4); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
+      lp.connect(g); g.connect(o);
+      [110, 110.8, 220].forEach(function (f) { var s = c.createOscillator(); s.type = "sawtooth"; s.frequency.value = f; s.connect(lp); s.start(t); s.stop(t + 2); });
+      return 2.1; } }
+  };
+  var SOUND_ORDER = ["bell", "gong", "crystal", "marimba", "star", "drop", "sonar", "bike", "phone", "digital", "siren", "horn"];
+
+  /* ================= پخش ================= */
+  var current = null; // { stop: fn }
+  function setRing(on) { $("ring").classList.toggle("show", on); }
+
+  function stopAll() {
+    if (current) { current.stop(); current = null; }
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate(0);
+    setRing(false);
+  }
+
+  // play: صدا را reps بار پخش می‌کند و بعد done را صدا می‌زند
+  function play(key, done) {
+    var a = cfg[key];
+    stopAll();
+    var finished = false, timers = [];
+    function fin() { if (finished) return; finished = true; current = null; setRing(false); if (done) done(); }
+    setRing(true);
+
+    if (a.sound === "custom") {
+      var cc;
+      try { cc = ctx(); } catch (e) { fin(); return; }
+      current = { stop: function () { finished = true; } };
+      var getRec = mem[key] ? Promise.resolve(mem[key]) : idbGet(key);
+      getRec.then(function (rec) {
+        if (!rec || !rec.buf) { $("msg").textContent = "فایلی انتخاب نشده."; fin(); return; }
+        mem[key] = rec;
+        return cc.decodeAudioData(rec.buf.slice(0)).then(function (buf) {
+          if (finished) return;
+          var master = cc.createGain();
+          master.gain.value = Math.pow(a.vol / 100, 1.5);
+          master.connect(cc.destination);
+          var len = Math.min(buf.duration, 30); // حداکثر ۳۰ ثانیه از هر فایل
+          var t = cc.currentTime + 0.05, srcs = [];
+          for (var i = 0; i < a.reps; i++) {
+            var s = cc.createBufferSource(); s.buffer = buf; s.connect(master);
+            s.start(t, 0, len); srcs.push(s); t += len + 0.3;
+          }
+          timers.push(setTimeout(fin, (t - cc.currentTime) * 1000));
+          current = { stop: function () {
+            finished = true; timers.forEach(clearTimeout);
+            srcs.forEach(function (s) { try { s.stop(); } catch (e) {} });
+            try { master.disconnect(); } catch (e) {}
+          } };
+        });
+      }).catch(function () {
+        $("msg").textContent = "این فایل پخش نشد (شاید فرمتش پشتیبانی نمی‌شود).";
+        fin();
+      });
+      return;
+    }
+
+    var def = SOUNDS[a.sound] || SOUNDS.bell, c;
+    try { c = ctx(); } catch (e) { fin(); return; }
+    var master = c.createGain(); master.gain.value = Math.pow(a.vol / 100, 1.5);
+    master.connect(c.destination);
+    var bus = c.createGain(); bus.connect(master);
+    var conv = c.createConvolver(); conv.buffer = impulse(c);
+    var send = c.createGain(); send.gain.value = def.rv;
+    bus.connect(send); send.connect(conv); conv.connect(master);
+
+    var t = c.currentTime + 0.05;
+    for (var i = 0; i < a.reps; i++) { t += def.f(c, bus, t) + 0.3 - 0.0; }
+    var total = (t - c.currentTime) * 1000;
+    timers.push(setTimeout(fin, total));
+    current = { stop: function () {
+      finished = true; timers.forEach(clearTimeout);
+      try { master.gain.cancelScheduledValues(c.currentTime); master.gain.setTargetAtTime(0, c.currentTime, 0.03); } catch (e) {}
+      setTimeout(function () { try { master.disconnect(); } catch (e) {} }, 300);
+    } };
+  }
+
+  /* ================= اعلام ================= */
+  function log(text) {
+    var el = $("log"), t = new Date();
+    if (el.dataset.empty !== "0") { el.textContent = ""; el.dataset.empty = "0"; }
+    var d = document.createElement("div");
+    d.textContent = fa(("0" + t.getHours()).slice(-2)) + ":" + fa(("0" + t.getMinutes()).slice(-2)) + "  " + text;
+    el.insertBefore(d, el.firstChild);
+  }
+
+  function say(text) {
+    try {
+      if (!window.speechSynthesis) return;
+      var u = new SpeechSynthesisUtterance(text); u.lang = "fa-IR"; u.rate = 0.95;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  function announce(key, p) {
+    var a = cfg[key];
+    var text = key === "low"
+      ? "شارژ باتری کم است، " + fa(p) + " درصد"
+      : "شارژ باتری به " + fa(p) + " درصد رسید";
+    if (a.vib && navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 500]);
+    if (cfg.notif && "Notification" in window && Notification.permission === "granted") {
+      try { new Notification("باتری", { body: text }); } catch (e) {}
+    }
+    log(text);
+    play(key, function () { if (a.voice) say(text); });
+  }
+
+  /* ================= باتری ================= */
+  var batt = null, firedLow = false, firedFull = false, C = 628;
+
+  function colorFor(p) {
+    if (batt && batt.charging) return "var(--acc)";
+    return p <= cfg.low.level ? "var(--bad)" : p <= cfg.low.level + 20 ? "var(--warn)" : "var(--acc)";
+  }
+
+  function render() {
+    $("markLo").style.strokeDashoffset = -(C * cfg.low.level / 100) + 1;
+    $("markHi").style.strokeDashoffset = -(C * cfg.full.level / 100) + 1;
+    if (!batt) return;
+    var p = Math.round(batt.level * 100);
+    $("pct").textContent = fa(p) + "٪";
+    $("bar").style.strokeDashoffset = C - C * batt.level;
+    document.documentElement.style.setProperty("--c", colorFor(p));
+    $("state").textContent = 
